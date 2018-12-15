@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+const (
+	clientID     = "89c1b05d77fb1c92a1ef"
+	clientSecret = "541ddd76e65abeabd12ad9f8b02f6601394d3ad0"
+)
+
 //User is
 type User struct {
 	Login       string `json:"login"`
@@ -30,6 +35,12 @@ type User struct {
 	Following   int    `json:"following"`
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
+}
+
+//GetLoginURL is
+func GetLoginURL(state string) string {
+	url := fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&scope=user:email&state=%s", clientID, state)
+	return url
 }
 
 //GetGithubAccessToken is

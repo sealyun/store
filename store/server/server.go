@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/emicklei/go-restful"
 )
@@ -29,35 +28,41 @@ import (
 //UserResource  s
 type UserResource struct{}
 
-const (
-	clientID     = "89c1b05d77fb1c92a1ef"
-	clientSecret = "541ddd76e65abeabd12ad9f8b02f6601394d3ad0"
-)
-
 //RegisterTo is
 func (u UserResource) RegisterTo(container *restful.Container) {
-	ws := new(restful.WebService)
-	ws.
+	loginless := new(restful.WebService)
+	loginless.
 		Path("").
 		Consumes("*/*").
 		Produces("*/*")
+	loginless.Route(loginless.GET("/callback").To(u.callback))
 
-	ws.Filter(webserviceLogging).Filter(checkCookie)
+	ws := new(restful.WebService)
+	ws.
+		Path("/user").
+		Consumes("*/*").
+		Produces("*/*")
+
+	ws.Filter(checkCookie)
 
 	ws.Route(ws.GET("/{user-id}").To(u.nop))
-	ws.Route(ws.GET("/callback").To(u.callback))
 	ws.Route(ws.POST("").To(u.nop))
 	ws.Route(ws.PUT("/{user-id}").To(u.nop))
 	ws.Route(ws.DELETE("/{user-id}").To(u.nop))
 
 	container.Add(ws)
+	container.Add(loginless)
 }
 
 // if check cookie failed, redirect to login page
 func checkCookie(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	now := time.Now()
+	cookie, err := req.Request.Cookie("user")
+	if err != nil || cookie == nil {
+		fmt.Println("login please : ", err, req.Request.URL.String())
+		http.Redirect(resp, req.Request, GetLoginURL(req.Request.URL.String()), http.StatusMovedPermanently)
+		return
+	}
 	chain.ProcessFilter(req, resp)
-	log.Printf("[webservice-filter (timer)] %v\n", time.Now().Sub(now))
 }
 
 func (u UserResource) nop(request *restful.Request, response *restful.Response) {
@@ -74,7 +79,18 @@ func (u UserResource) callback(request *restful.Request, response *restful.Respo
 	if err != nil {
 		fmt.Println(err)
 	}
-	_ = user
+
+	// Set cookie
+	cookie := http.Cookie{Name: "user", Value: user.Login, Path: "/", MaxAge: 86400}
+	http.SetCookie(response, &cookie)
+
+	request.Request.AddCookie(&cookie)
+
+	state := request.QueryParameter("state")
+	fmt.Println("redirect url is : ", state)
+	//redirect back to user request
+	http.Redirect(response, request.Request, "http://localhost:8001"+state, http.StatusMovedPermanently)
+
 	io.WriteString(response.ResponseWriter, "code is : "+code)
 }
 
