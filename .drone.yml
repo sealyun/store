@@ -1,0 +1,18 @@
+kind: pipeline
+name: default
+
+steps:
+- name: build-font
+  image: fanux/store-font:dev
+  commands:
+     - cd font
+     - npm build
+
+- name: publish-font
+  image: plugins/docker
+  settings:
+    repo: fanux/store-font
+    tags: ${DRONE_TAG=latest}
+    username: fanux
+    password:
+      from_secret: docker-hub-pass
