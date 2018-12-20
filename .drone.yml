@@ -16,3 +16,12 @@ steps:
     username: fanux
     password:
       from_secret: docker-hub-pass
+
+- name: deploy-back
+  image: lachlanevenson/k8s-kubectl
+  commands:
+    - mkdir ~/.kube
+    - cp deploy/config ~/.kube/config
+    - kubectl delete -f deploy/store-back.yaml || true
+    - kubectl create -f deploy/store-back.yaml || true
+
